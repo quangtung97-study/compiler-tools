@@ -15,7 +15,7 @@ init =
 
 
 withValid : Bool -> TextField -> TextField
-withValid valid textField =
+withValid valid _ =
     valid
 
 

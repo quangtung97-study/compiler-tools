@@ -4,6 +4,7 @@ import Browser
 import Css exposing (Style)
 import Css.Transitions as T
 import DFA
+import Html as H0
 import Html.Styled as H exposing (Html, div, text, toUnstyled)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
@@ -134,10 +135,15 @@ mainView model =
         ]
 
 
+bodyView : Model -> H0.Html Msg
+bodyView model =
+    toUnstyled (mainView model)
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = "Compiler"
-    , body = [ toUnstyled (mainView model) ]
+    , body = [ bodyView model ]
     }
 
 

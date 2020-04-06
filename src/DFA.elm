@@ -1,10 +1,10 @@
 module DFA exposing (Model, Msg, init, update, view)
 
 import Array exposing (Array)
-import Css
+import Css exposing (Style)
 import DFA.Algorithm as Algorithm
-import Html.Styled exposing (Html, div, input, span, sub, text)
-import Html.Styled.Attributes exposing (css, type_, value)
+import Html.Styled exposing (Html, div, span, sub, text)
+import Html.Styled.Attributes exposing (css, value)
 import Html.Styled.Events exposing (onInput)
 import Icons.Sigma as Sigma
 import TextField
@@ -120,6 +120,13 @@ stateInputView valid t =
         ]
 
 
+subStyle : Style
+subStyle =
+    Css.batch
+        [ Css.fontSize (Css.px 14)
+        ]
+
+
 stateView : Algorithm.State -> Html Msg
 stateView state =
     let
@@ -131,7 +138,7 @@ stateView state =
     in
     span []
         [ text state.name
-        , sub [] [ text subscripts ]
+        , sub [ css [ subStyle ] ] [ text subscripts ]
         ]
 
 
