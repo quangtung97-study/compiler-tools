@@ -4,6 +4,7 @@ module DFA.Algorithm exposing
     , alphabet
     , emptyState
     , init
+    , initState
     , parseState
     )
 
@@ -13,6 +14,13 @@ import Array exposing (Array)
 type alias State =
     { name : String
     , subscripts : Array String
+    }
+
+
+initState : State
+initState =
+    { name = ""
+    , subscripts = Array.empty
     }
 
 

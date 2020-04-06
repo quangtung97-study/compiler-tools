@@ -3,7 +3,8 @@ module DFA exposing (Model, Msg, init, update, view)
 import Array exposing (Array)
 import Css exposing (Style)
 import DFA.Algorithm as Algorithm
-import Html.Styled exposing (Html, div, span, sub, text)
+import DFA.Transition as Transition
+import Html.Styled as H exposing (Html, div, span, sub, text)
 import Html.Styled.Attributes exposing (css, value)
 import Html.Styled.Events exposing (onInput)
 import Icons.Sigma as Sigma
@@ -15,6 +16,7 @@ type alias Model =
     , stateText : String
     , dfa : Algorithm.DFA
     , valid : Bool
+    , transition : Transition.Model
     }
 
 
@@ -24,12 +26,14 @@ init =
     , stateText = ""
     , dfa = Algorithm.init
     , valid = True
+    , transition = Transition.init
     }
 
 
 type Msg
     = AlphabetTextChanged String
     | StateTextChanged String
+    | TransitionMsg Transition.Msg
 
 
 update : Msg -> Model -> Model
@@ -64,6 +68,9 @@ update msg model =
                         Nothing ->
                             False
             }
+
+        TransitionMsg tMsg ->
+            { model | transition = Transition.update tMsg model.transition }
 
 
 alphabetView : Array Char -> Html Msg
@@ -186,5 +193,8 @@ view model =
             ]
             [ stateInputView model.valid model.stateText
             , stateListView model.dfa.states
+            ]
+        , div []
+            [ H.map TransitionMsg (Transition.view model.dfa model.transition)
             ]
         ]
