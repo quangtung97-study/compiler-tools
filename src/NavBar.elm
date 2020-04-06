@@ -9,31 +9,31 @@ import Theme
 
 
 type alias Model =
-    { openAutomata : Bool
-    , openGrammar : Bool
+    { openScanner : Bool
+    , openParser : Bool
     }
 
 
 init : Model
 init =
-    { openAutomata = False
-    , openGrammar = False
+    { openScanner = False
+    , openParser = False
     }
 
 
 type Msg
-    = ToggleAutomata
-    | ToggleGrammar
+    = ToggleScanner
+    | ToggleParser
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        ToggleAutomata ->
-            { model | openAutomata = not model.openAutomata }
+        ToggleScanner ->
+            { model | openScanner = not model.openScanner }
 
-        ToggleGrammar ->
-            { model | openGrammar = not model.openGrammar }
+        ToggleParser ->
+            { model | openParser = not model.openParser }
 
 
 navItemColor : Css.Color
@@ -116,6 +116,6 @@ view model =
         []
         [ logoView
         , Divider.view
-        , itemView model.openAutomata ToggleAutomata "Automata" [ "tung", "tung 2" ]
-        , itemView model.openGrammar ToggleGrammar "Grammar" [ "tung", "tung 2" ]
+        , itemView model.openScanner ToggleScanner "Scanner" [ "tung", "tung 2" ]
+        , itemView model.openParser ToggleParser "Parser" [ "tung", "tung 2" ]
         ]

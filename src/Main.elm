@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Css exposing (Style)
 import Css.Transitions as T
+import DFA
 import Html.Styled as H exposing (Html, div, text, toUnstyled)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
@@ -28,6 +29,7 @@ main =
 type alias Model =
     { openNavBar : Bool
     , navBar : NavBar.Model
+    , dfa : DFA.Model
     }
 
 
@@ -35,6 +37,7 @@ init : Flags -> ( Model, Cmd Msg )
 init _ =
     ( { openNavBar = True
       , navBar = NavBar.init
+      , dfa = DFA.init
       }
     , Cmd.none
     )
@@ -43,6 +46,7 @@ init _ =
 type Msg
     = ToggleNavBar
     | NavBarMsg NavBar.Msg
+    | DFAMsg DFA.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -55,6 +59,11 @@ update msg model =
             ( { model
                 | navBar = NavBar.update navBarMsg model.navBar
               }
+            , Cmd.none
+            )
+
+        DFAMsg dfaMsg ->
+            ( { model | dfa = DFA.update dfaMsg model.dfa }
             , Cmd.none
             )
 
@@ -118,6 +127,9 @@ mainView model =
                 ]
             ]
             [ topBarView
+            , div []
+                [ H.map DFAMsg (DFA.view model.dfa)
+                ]
             ]
         ]
 
