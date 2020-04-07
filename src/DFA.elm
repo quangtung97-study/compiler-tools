@@ -14,8 +14,9 @@ import TextField
 type alias Model =
     { alphabetText : String
     , stateText : String
-    , dfa : Algorithm.DFA
-    , valid : Bool
+    , states : Array Algorithm.State
+    , alphabet : Array Char
+    , statesValid : Bool
     , transition : Transition.Model
     }
 
@@ -24,8 +25,9 @@ init : Model
 init =
     { alphabetText = ""
     , stateText = ""
-    , dfa = Algorithm.init
-    , valid = True
+    , states = Array.empty
+    , alphabet = Array.empty
+    , statesValid = True
     , transition = Transition.init
     }
 
@@ -38,36 +40,14 @@ type Msg
 
 update : Msg -> Model -> Model
 update msg model =
-    let
-        dfa =
-            model.dfa
-    in
     case msg of
         AlphabetTextChanged s ->
-            { model
-                | alphabetText = s
-                , dfa = Algorithm.alphabet dfa s
-            }
+            { model | alphabetText = s }
+                |> Algorithm.updateAlphabet s
 
         StateTextChanged s ->
-            let
-                newStates =
-                    Algorithm.parseState s
-            in
-            { model
-                | stateText = s
-                , dfa =
-                    { dfa
-                        | states = Maybe.withDefault dfa.states newStates
-                    }
-                , valid =
-                    case newStates of
-                        Just _ ->
-                            True
-
-                        Nothing ->
-                            False
-            }
+            { model | stateText = s }
+                |> Algorithm.updateStates s
 
         TransitionMsg tMsg ->
             { model | transition = Transition.update tMsg model.transition }
@@ -183,7 +163,7 @@ view model =
                 ]
             ]
             [ alphabetInputView model.alphabetText
-            , alphabetView model.dfa.alphabet
+            , alphabetView model.alphabet
             ]
         , div
             [ css
@@ -191,10 +171,10 @@ view model =
                 , Css.alignItems Css.center
                 ]
             ]
-            [ stateInputView model.valid model.stateText
-            , stateListView model.dfa.states
+            [ stateInputView model.statesValid model.stateText
+            , stateListView model.states
             ]
         , div []
-            [ H.map TransitionMsg (Transition.view model.dfa model.transition)
+            [ H.map TransitionMsg (Transition.view model model.transition)
             ]
         ]

@@ -1,6 +1,7 @@
 module NavBar exposing (Model, Msg, init, update, view)
 
-import Css
+import Css exposing (Style)
+import Css.Transitions as T
 import Divider
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
@@ -61,6 +62,27 @@ logoView =
         ]
 
 
+subItemStyle : Bool -> Int -> Style
+subItemStyle open count =
+    if open then
+        Css.batch
+            [ Css.maxHeight (Css.px (36.0 * toFloat count))
+            , T.transition
+                [ T.maxHeight3 200 0 T.easeInOut
+                ]
+            , Css.overflow Css.hidden
+            ]
+
+    else
+        Css.batch
+            [ Css.maxHeight Css.zero
+            , T.transition
+                [ T.maxHeight3 200 0 T.easeInOut
+                ]
+            , Css.overflow Css.hidden
+            ]
+
+
 itemView : Bool -> Msg -> String -> List String -> Html Msg
 itemView open clickMsg title subItems =
     let
@@ -68,6 +90,7 @@ itemView open clickMsg title subItems =
             div
                 [ css
                     [ Css.padding (Css.px 8)
+                    , Css.lineHeight (Css.px 20)
                     , Css.fontSize (Css.px 16)
                     , Css.fontWeight Css.bold
                     , Css.paddingLeft (Css.px 20)
@@ -81,11 +104,15 @@ itemView open clickMsg title subItems =
                 [ text itemTitle ]
 
         subItemViews =
-            if open then
-                List.map subItemView subItems
-
-            else
-                []
+            div
+                [ css
+                    [ subItemStyle open (List.length subItems)
+                    ]
+                ]
+                (List.map
+                    subItemView
+                    subItems
+                )
     in
     div
         []
@@ -104,9 +131,7 @@ itemView open clickMsg title subItems =
             ]
             [ text title
             ]
-        , div
-            []
-            subItemViews
+        , subItemViews
         ]
 
 
@@ -116,6 +141,6 @@ view model =
         []
         [ logoView
         , Divider.view
-        , itemView model.openScanner ToggleScanner "Scanner" [ "tung", "tung 2" ]
-        , itemView model.openParser ToggleParser "Parser" [ "tung", "tung 2" ]
+        , itemView model.openScanner ToggleScanner "Scanner" [ "DFA", "NFA" ]
+        , itemView model.openParser ToggleParser "Parser" [ "Backtrack", "LL(k)", "LR(1)" ]
         ]

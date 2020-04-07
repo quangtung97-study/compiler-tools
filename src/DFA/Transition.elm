@@ -10,7 +10,7 @@ import Array
 import Css exposing (Style)
 import DFA.Algorithm as Algorithm exposing (DFA)
 import Dict exposing (Dict)
-import Html.Styled exposing (Html, input, span, sub, table, td, text, th, tr)
+import Html.Styled exposing (Html, div, input, table, td, text, th, tr)
 import Html.Styled.Attributes exposing (css, value)
 import Html.Styled.Events exposing (onInput)
 
@@ -47,17 +47,16 @@ init =
 
 getInputText : Int -> Int -> Model -> String
 getInputText i j model =
-    case Dict.get i model.inputTexts of
-        Just subDict ->
-            case Dict.get j subDict of
-                Just s ->
-                    s
+    Dict.get i model.inputTexts
+        |> Maybe.andThen (Dict.get j)
+        |> Maybe.withDefault ""
 
-                Nothing ->
-                    ""
 
-        Nothing ->
-            ""
+getInputState : Int -> Int -> Model -> Maybe Algorithm.State
+getInputState i j model =
+    Dict.get i model.stateDict
+        |> Maybe.andThen (Dict.get j)
+        |> Maybe.map .state
 
 
 stringToEntryState : String -> EntryState -> EntryState
@@ -67,7 +66,7 @@ stringToEntryState s entry =
             entry.state
 
         maybeState =
-            Algorithm.parseState s
+            Algorithm.parseStates s
                 |> Maybe.andThen
                     (\array ->
                         if Array.length array == 1 then
@@ -152,12 +151,22 @@ update msg model =
             setInputText i j s model
 
 
+tableFontSize : Float
+tableFontSize =
+    18
+
+
+subscriptSize : Float
+subscriptSize =
+    13
+
+
 inputStyle : Style
 inputStyle =
     Css.batch
         [ Css.width (Css.px 80)
         , Css.padding (Css.px 4)
-        , Css.fontSize (Css.px 16)
+        , Css.fontSize (Css.px tableFontSize)
         , Css.outline Css.none
         ]
 
@@ -194,7 +203,7 @@ headerStyle : Style
 headerStyle =
     Css.batch
         [ Css.backgroundColor headerColor
-        , Css.fontSize (Css.px 16)
+        , Css.fontSize (Css.px tableFontSize)
         , Css.padding (Css.px 4)
         ]
 
@@ -202,18 +211,8 @@ headerStyle =
 firstColStyle : Style
 firstColStyle =
     Css.batch
-        [ Css.fontSize (Css.px 16)
-        , Css.fontWeight Css.bold
-        , Css.textAlign Css.center
-        , Css.backgroundColor headerColor
+        [ Css.backgroundColor headerColor
         , Css.padding2 Css.zero (Css.px 8)
-        ]
-
-
-subStyle : Style
-subStyle =
-    Css.batch
-        [ Css.fontSize (Css.px 14)
         ]
 
 
@@ -226,58 +225,142 @@ stateView state =
                 |> List.intersperse ", "
                 |> String.concat
     in
-    span []
-        [ text state.name
-        , sub [ css [ subStyle ] ] [ text subscripts ]
+    div
+        [ css
+            [ Css.displayFlex
+            , Css.justifyContent Css.center
+            , Css.fontSize (Css.px tableFontSize)
+            , Css.fontWeight Css.bold
+            ]
+        ]
+        [ div [ css [ Css.margin Css.auto ] ]
+            [ text state.name
+            ]
+        , div
+            [ css
+                [ Css.margin Css.auto
+                , Css.fontSize (Css.px subscriptSize)
+                , Css.transform
+                    (Css.translateY (Css.px 4))
+                ]
+            ]
+            [ text subscripts ]
         ]
 
 
-view : DFA -> Model -> Html Msg
-view dfa model =
-    let
-        headers =
-            dfa.alphabet
-                |> Array.toList
-                |> List.map
-                    (\c ->
-                        th [ css [ headerStyle ] ] [ text (String.fromChar c) ]
-                    )
+headersView : DFA a -> List (Html Msg)
+headersView dfa =
+    dfa.alphabet
+        |> Array.toList
+        |> List.map
+            (\c ->
+                th [ css [ headerStyle ] ] [ text (String.fromChar c) ]
+            )
 
+
+rowsView : EntryView a -> DFA a -> Model -> List (Html Msg)
+rowsView entryView dfa model =
+    let
         len =
             Array.length dfa.alphabet
 
-        inputs i =
+        entries i =
             List.range 0 (len - 1)
-                |> List.map
-                    (\j ->
-                        td []
-                            [ input
-                                [ value (getInputText i j model)
-                                , css
-                                    [ inputStyle
-                                    , inputValidStyle (stateDictValid i j model.stateDict)
-                                    ]
-                                , onInput (InputTextChanged i j)
-                                ]
-                                []
-                            ]
-                    )
-
-        rows =
-            dfa.states
-                |> Array.toList
-                |> List.indexedMap
-                    (\index s ->
-                        tr []
-                            (td [ css [ firstColStyle ] ] [ stateView s ]
-                                :: inputs index
-                            )
-                    )
+                |> List.map (\j -> td [] [ entryView dfa model i j ])
     in
+    dfa.states
+        |> Array.toList
+        |> List.indexedMap
+            (\index s ->
+                tr []
+                    (td [ css [ firstColStyle ] ] [ stateView s ]
+                        :: entries index
+                    )
+            )
+
+
+type alias EntryView a =
+    DFA a -> Model -> Int -> Int -> Html Msg
+
+
+tableView : EntryView a -> DFA a -> Model -> Html Msg
+tableView entryView dfa model =
     table [ css [ tableStyle ] ]
         (tr []
             (th [ css [ headerStyle ] ] []
-                :: headers
+                :: headersView dfa
             )
-            :: rows
+            :: rowsView entryView dfa model
         )
+
+
+inputEntryView : DFA a -> Model -> Int -> Int -> Html Msg
+inputEntryView _ model i j =
+    input
+        [ value (getInputText i j model)
+        , css
+            [ inputStyle
+            , inputValidStyle (stateDictValid i j model.stateDict)
+            ]
+        , onInput (InputTextChanged i j)
+        ]
+        []
+
+
+appendIf : Bool -> a -> List a -> List a
+appendIf b e list =
+    if b then
+        e :: list
+
+    else
+        list
+
+
+stateEntryView : DFA a -> Model -> Int -> Int -> Html Msg
+stateEntryView dfa model i j =
+    let
+        failedStyle =
+            Css.batch
+                [ Css.borderColor (Css.rgb 255 0 0)
+                , Css.borderStyle Css.solid
+                , Css.borderWidth (Css.px 1)
+                , Css.boxShadow5 Css.zero Css.zero (Css.px 10) Css.zero (Css.rgb 255 0 0)
+                ]
+
+        newStateView state =
+            div
+                [ css
+                    (appendIf
+                        (not (Algorithm.containsState state dfa.states))
+                        failedStyle
+                        [ Css.height (Css.px 30)
+                        , Css.padding2 Css.zero (Css.px 20)
+                        , Css.displayFlex
+                        , Css.alignItems Css.center
+                        ]
+                    )
+                ]
+                [ stateView state
+                ]
+
+        failedView =
+            div
+                [ css
+                    [ failedStyle
+                    , Css.width (Css.px 60)
+                    , Css.height (Css.px 30)
+                    ]
+                ]
+                []
+    in
+    getInputState i j model
+        |> Maybe.map newStateView
+        |> Maybe.withDefault failedView
+
+
+view : DFA a -> Model -> Html Msg
+view dfa model =
+    div []
+        [ tableView inputEntryView dfa model
+        , tableView stateEntryView dfa model
+        ]

@@ -17,7 +17,7 @@ testSimpleString =
         (\_ ->
             let
                 result =
-                    A.parseState "abcA"
+                    A.parseStates "abcA"
 
                 expected =
                     Just
@@ -36,9 +36,9 @@ testUnrecognized : Test
 testUnrecognized =
     describe "unrecognized characters"
         [ test "character +"
-            (\_ -> Expect.equal Nothing (A.parseState "abc+"))
+            (\_ -> Expect.equal Nothing (A.parseStates "abc+"))
         , test "character /"
-            (\_ -> Expect.equal Nothing (A.parseState "abc/"))
+            (\_ -> Expect.equal Nothing (A.parseStates "abc/"))
         ]
 
 
@@ -46,11 +46,11 @@ testUnderscore : Test
 testUnderscore =
     describe "Undescore without subscript"
         [ test "single state"
-            (\_ -> Expect.equal Nothing (A.parseState "abc_"))
+            (\_ -> Expect.equal Nothing (A.parseStates "abc_"))
         , test "2 state"
-            (\_ -> Expect.equal Nothing (A.parseState "abc_2,3 qq_"))
+            (\_ -> Expect.equal Nothing (A.parseStates "abc_2,3 qq_"))
         , test "double underscore"
-            (\_ -> Expect.equal Nothing (A.parseState "abc_2,3qq_"))
+            (\_ -> Expect.equal Nothing (A.parseStates "abc_2,3qq_"))
         ]
 
 
@@ -61,7 +61,7 @@ testComplexString =
             (\_ ->
                 let
                     result =
-                        A.parseState "ab_1 cc_4"
+                        A.parseStates "ab_1 cc_4"
 
                     expected =
                         Just
@@ -81,7 +81,7 @@ testComplexString =
             (\_ ->
                 let
                     result =
-                        A.parseState "ab_1,aa cc_4,bb"
+                        A.parseStates "ab_1,aa cc_4,bb"
 
                     expected =
                         Just

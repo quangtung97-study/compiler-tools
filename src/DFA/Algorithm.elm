@@ -1,11 +1,12 @@
 module DFA.Algorithm exposing
     ( DFA
     , State
-    , alphabet
+    , containsState
     , emptyState
-    , init
     , initState
-    , parseState
+    , parseStates
+    , updateAlphabet
+    , updateStates
     )
 
 import Array exposing (Array)
@@ -24,16 +25,11 @@ initState =
     }
 
 
-type alias DFA =
-    { states : Array State
-    , alphabet : Array Char
-    }
-
-
-init : DFA
-init =
-    { states = Array.empty
-    , alphabet = Array.empty
+type alias DFA a =
+    { a
+        | states : Array State
+        , alphabet : Array Char
+        , statesValid : Bool
     }
 
 
@@ -44,9 +40,16 @@ fromAlphabetString s =
         |> Array.fromList
 
 
-alphabet : DFA -> String -> DFA
-alphabet dfa s =
+updateAlphabet : String -> DFA a -> DFA a
+updateAlphabet s dfa =
     { dfa | alphabet = fromAlphabetString s }
+
+
+containsState : State -> Array State -> Bool
+containsState s states =
+    states
+        |> Array.toList
+        |> List.any (\e -> e == s)
 
 
 type ScanState
@@ -177,11 +180,28 @@ scanRecur current q stateList charList =
                     Nothing
 
 
-parseState : String -> Maybe (Array State)
-parseState s =
+parseStates : String -> Maybe (Array State)
+parseStates s =
     String.toList s
         |> scanRecur emptyState Init []
         |> Maybe.map
             (\( _, _, qs ) ->
                 Array.fromList (List.reverse qs)
             )
+
+
+updateStates : String -> DFA a -> DFA a
+updateStates s dfa =
+    let
+        result =
+            parseStates s
+    in
+    { dfa
+        | states =
+            result
+                |> Maybe.withDefault dfa.states
+        , statesValid =
+            result
+                |> Maybe.map (\_ -> True)
+                |> Maybe.withDefault False
+    }
