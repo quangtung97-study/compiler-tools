@@ -3,13 +3,17 @@ module DFA.Algorithm exposing
     , State
     , containsState
     , emptyState
-    , initState
     , parseStates
+    , statesContainFinalStates
+    , statesContainStartState
     , updateAlphabet
+    , updateFinalStates
+    , updateStartState
     , updateStates
     )
 
 import Array exposing (Array)
+import Set
 
 
 type alias State =
@@ -18,11 +22,9 @@ type alias State =
     }
 
 
-initState : State
-initState =
-    { name = ""
-    , subscripts = Array.empty
-    }
+emptyState : State
+emptyState =
+    { name = "", subscripts = Array.empty }
 
 
 type alias DFA a =
@@ -30,6 +32,10 @@ type alias DFA a =
         | states : Array State
         , alphabet : Array Char
         , statesValid : Bool
+        , finalStates : Array State
+        , finalStatesValid : Bool
+        , startState : Maybe State
+        , startStateValid : Bool
     }
 
 
@@ -37,6 +43,8 @@ fromAlphabetString : String -> Array Char
 fromAlphabetString s =
     String.toList s
         |> List.filter (\c -> (c /= ' ') && (c /= '\t'))
+        |> Set.fromList
+        |> Set.toList
         |> Array.fromList
 
 
@@ -58,11 +66,6 @@ type ScanState
     | Underscore
     | Subscripts
     | Comma
-
-
-emptyState : State
-emptyState =
-    { name = "", subscripts = Array.empty }
 
 
 stateNameAppend : State -> Char -> State
@@ -190,11 +193,36 @@ parseStates s =
             )
 
 
+stateToComparable : State -> ( String, List String )
+stateToComparable s =
+    ( s.name, Array.toList s.subscripts )
+
+
+comparableToState : ( String, List String ) -> State
+comparableToState ( name, subscripts ) =
+    { name = name, subscripts = Array.fromList subscripts }
+
+
+parseStatesUnique : String -> Maybe (Array State)
+parseStatesUnique s =
+    parseStates s
+        |> Maybe.map
+            (\array ->
+                array
+                    |> Array.toList
+                    |> List.map stateToComparable
+                    |> Set.fromList
+                    |> Set.toList
+                    |> List.map comparableToState
+                    |> Array.fromList
+            )
+
+
 updateStates : String -> DFA a -> DFA a
 updateStates s dfa =
     let
         result =
-            parseStates s
+            parseStatesUnique s
     in
     { dfa
         | states =
@@ -205,3 +233,73 @@ updateStates s dfa =
                 |> Maybe.map (\_ -> True)
                 |> Maybe.withDefault False
     }
+
+
+statesContainFinalStates : DFA a -> Bool
+statesContainFinalStates dfa =
+    let
+        stateSet =
+            Array.toList dfa.states
+                |> List.map stateToComparable
+                |> Set.fromList
+
+        finalStateSet =
+            Array.toList dfa.finalStates
+                |> List.map stateToComparable
+                |> Set.fromList
+    in
+    Set.isEmpty (Set.diff finalStateSet stateSet)
+
+
+updateFinalStates : String -> DFA a -> DFA a
+updateFinalStates s dfa =
+    let
+        result =
+            parseStatesUnique s
+    in
+    { dfa
+        | finalStates =
+            result
+                |> Maybe.withDefault dfa.finalStates
+        , finalStatesValid =
+            result
+                |> Maybe.map (\_ -> True)
+                |> Maybe.withDefault False
+    }
+
+
+updateStartState : String -> DFA a -> DFA a
+updateStartState s dfa =
+    let
+        result =
+            parseStatesUnique s
+    in
+    { dfa
+        | startState =
+            case result of
+                Nothing ->
+                    dfa.startState
+
+                Just array ->
+                    Array.get 0 array
+        , startStateValid =
+            result
+                |> Maybe.map (\array -> Array.length array <= 1)
+                |> Maybe.withDefault False
+    }
+
+
+statesContainStartState : DFA a -> Bool
+statesContainStartState dfa =
+    let
+        stateSet =
+            Array.toList dfa.states
+                |> List.map stateToComparable
+                |> Set.fromList
+    in
+    case dfa.startState of
+        Nothing ->
+            False
+
+        Just s ->
+            Set.member (stateToComparable s) stateSet

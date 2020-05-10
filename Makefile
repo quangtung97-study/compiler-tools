@@ -1,4 +1,7 @@
-.PHONY: count
+.PHONY: all test count
+
+all:
+	elm-live src/Main.elm -- --debug
 
 test:
 	elm-test

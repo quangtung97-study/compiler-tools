@@ -21,19 +21,15 @@ type alias EntryState =
     }
 
 
-type alias StateDict =
-    Dict Int (Dict Int EntryState)
-
-
 type alias Model =
-    { inputTexts : Dict Int (Dict Int String)
-    , stateDict : StateDict
+    { inputTexts : Dict ( Int, Int ) String
+    , stateDict : Dict ( Int, Int ) EntryState
     }
 
 
 emptyEntryState : EntryState
 emptyEntryState =
-    { state = Algorithm.initState
+    { state = Algorithm.emptyState
     , valid = True
     }
 
@@ -47,15 +43,13 @@ init =
 
 getInputText : Int -> Int -> Model -> String
 getInputText i j model =
-    Dict.get i model.inputTexts
-        |> Maybe.andThen (Dict.get j)
+    Dict.get ( i, j ) model.inputTexts
         |> Maybe.withDefault ""
 
 
 getInputState : Int -> Int -> Model -> Maybe Algorithm.State
 getInputState i j model =
-    Dict.get i model.stateDict
-        |> Maybe.andThen (Dict.get j)
+    Dict.get ( i, j ) model.stateDict
         |> Maybe.map .state
 
 
@@ -94,29 +88,33 @@ stringToEntryState s entry =
     { state = newState, valid = valid }
 
 
-setStateDict : Int -> Int -> String -> StateDict -> StateDict
-setStateDict i j s dict =
+setStateDict : Int -> Int -> String -> Model -> Model
+setStateDict i j s model =
     let
-        subDict =
-            Dict.get i dict
-                |> Maybe.withDefault Dict.empty
-
-        entry =
-            Dict.get j subDict
+        state =
+            Dict.get ( i, j ) model.stateDict
                 |> Maybe.withDefault emptyEntryState
 
-        newSubDict =
-            Dict.insert j (stringToEntryState s entry) subDict
+        newState =
+            if s == "" then
+                emptyEntryState
+
+            else
+                stringToEntryState s state
     in
-    Dict.insert i newSubDict dict
+    { model | stateDict = Dict.insert ( i, j ) newState model.stateDict }
 
 
-stateDictValid : Int -> Int -> StateDict -> Bool
-stateDictValid i j dict =
-    Dict.get i dict
+inputTextsValid : Int -> Int -> Model -> Bool
+inputTextsValid i j model =
+    Dict.get ( i, j ) model.inputTexts
         |> Maybe.andThen
-            (\subDict ->
-                Dict.get j subDict
+            (\text ->
+                if text == "" then
+                    Nothing
+
+                else
+                    Dict.get ( i, j ) model.stateDict
             )
         |> Maybe.map (\entry -> entry.valid)
         |> Maybe.withDefault True
@@ -124,20 +122,8 @@ stateDictValid i j dict =
 
 setInputText : Int -> Int -> String -> Model -> Model
 setInputText i j s model =
-    let
-        subDict =
-            Dict.get i model.inputTexts
-                |> Maybe.withDefault Dict.empty
-
-        newSubDict =
-            Dict.insert j s subDict
-    in
-    { model
-        | inputTexts =
-            model.inputTexts
-                |> Dict.insert i newSubDict
-        , stateDict = setStateDict i j s model.stateDict
-    }
+    { model | inputTexts = Dict.insert ( i, j ) s model.inputTexts }
+        |> setStateDict i j s
 
 
 type Msg
@@ -300,7 +286,7 @@ inputEntryView _ model i j =
         [ value (getInputText i j model)
         , css
             [ inputStyle
-            , inputValidStyle (stateDictValid i j model.stateDict)
+            , inputValidStyle (inputTextsValid i j model)
             ]
         , onInput (InputTextChanged i j)
         ]
@@ -347,7 +333,7 @@ stateEntryView dfa model i j =
             div
                 [ css
                     [ failedStyle
-                    , Css.width (Css.px 60)
+                    , Css.minWidth (Css.px 60)
                     , Css.height (Css.px 30)
                     ]
                 ]
@@ -361,6 +347,14 @@ stateEntryView dfa model i j =
 view : DFA a -> Model -> Html Msg
 view dfa model =
     div []
-        [ tableView inputEntryView dfa model
+        [ div
+            [ css
+                [ Css.marginTop (Css.px 4)
+                , Css.fontSize (Css.px 20)
+                , Css.fontWeight Css.bold
+                ]
+            ]
+            [ text "Transition Table: " ]
+        , tableView inputEntryView dfa model
         , tableView stateEntryView dfa model
         ]

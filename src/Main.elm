@@ -65,7 +65,7 @@ update msg model =
 
         DFAMsg dfaMsg ->
             ( { model | dfa = DFA.update dfaMsg model.dfa }
-            , Cmd.none
+            , Cmd.map DFAMsg (DFA.updateCmd dfaMsg model.dfa)
             )
 
 
