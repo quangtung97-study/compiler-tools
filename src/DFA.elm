@@ -4,13 +4,23 @@ import Array exposing (Array)
 import Button
 import Css exposing (Style)
 import DFA.Algorithm as Algorithm
-import DFA.Json exposing (encodeToString)
+import DFA.Json
+    exposing
+        ( alphabetToText
+        , decodeFromString
+        , encodeToString
+        , maybeStateToText
+        , statesToText
+        )
 import DFA.Transition as Transition
+import File exposing (File)
 import File.Download as Download
+import File.Select as Select
 import Html.Styled as H exposing (Html, div, span, sub, text)
 import Html.Styled.Attributes exposing (css, value)
 import Html.Styled.Events exposing (onInput)
 import Icons.Sigma as Sigma
+import Task
 import TextField
 
 
@@ -27,6 +37,7 @@ type alias Model =
     , finalStatesValid : Bool
     , startState : Maybe Algorithm.State
     , startStateValid : Bool
+    , loadFileError : String
     }
 
 
@@ -44,6 +55,7 @@ init =
     , finalStatesValid = True
     , startState = Nothing
     , startStateValid = True
+    , loadFileError = ""
     }
 
 
@@ -54,6 +66,9 @@ type Msg
     | StartStateTextChanged String
     | TransitionMsg Transition.Msg
     | SaveToFileClicked
+    | LoadFromFileClicked
+    | FileSelected File
+    | FileLoaded String
 
 
 update : Msg -> Model -> Model
@@ -81,6 +96,26 @@ update msg model =
         SaveToFileClicked ->
             model
 
+        LoadFromFileClicked ->
+            model
+
+        FileSelected _ ->
+            model
+
+        FileLoaded s ->
+            case decodeFromString init s of
+                Err error ->
+                    { model | loadFileError = error }
+
+                Ok ( newModel, newTransition ) ->
+                    { newModel
+                        | alphabetText = alphabetToText newModel.alphabet
+                        , statesText = statesToText newModel.states
+                        , finalStatesText = statesToText newModel.finalStates
+                        , startStateText = maybeStateToText newModel.startState
+                        , transition = newTransition
+                    }
+
 
 updateCmd : Msg -> Model -> Cmd Msg
 updateCmd msg model =
@@ -103,6 +138,15 @@ updateCmd msg model =
         SaveToFileClicked ->
             encodeToString model model.transition
                 |> Download.string "dfa.json" "application/json"
+
+        LoadFromFileClicked ->
+            Select.file [ "application/json" ] FileSelected
+
+        FileSelected file ->
+            Task.perform FileLoaded (File.toString file)
+
+        FileLoaded _ ->
+            Cmd.none
 
 
 alphabetView : Array Char -> Html Msg
@@ -319,11 +363,17 @@ view model =
             [ Button.init
                 |> Button.withCaption "Load from file"
                 |> Button.withColor Button.Primary
-                |> Button.build SaveToFileClicked
+                |> Button.build LoadFromFileClicked
             , Button.init
                 |> Button.withCaption "Save to file"
                 |> Button.withColor Button.Primary
                 |> Button.withStyle (Css.marginLeft (Css.px 8))
                 |> Button.build SaveToFileClicked
             ]
+        , div
+            [ css
+                [ Css.color (Css.rgb 255 0 0)
+                ]
+            ]
+            [ text model.loadFileError ]
         ]

@@ -4,12 +4,13 @@ module Button exposing
     , init
     , withCaption
     , withColor
+    , withDisabled
     , withStyle
     )
 
 import Css
 import Html.Styled exposing (Html, button, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes exposing (css, disabled)
 import Html.Styled.Events exposing (onClick)
 
 
@@ -23,12 +24,17 @@ type alias Button =
     { caption : String
     , color : Color
     , style : Css.Style
+    , disabled : Bool
     }
 
 
 init : Button
 init =
-    { caption = "", color = Primary, style = Css.batch [] }
+    { caption = ""
+    , color = Primary
+    , style = Css.batch []
+    , disabled = False
+    }
 
 
 withCaption : String -> Button -> Button
@@ -46,38 +52,50 @@ withStyle style button =
     { button | style = style }
 
 
+withDisabled : Bool -> Button -> Button
+withDisabled b button =
+    { button | disabled = b }
+
+
 buttonColor : Button -> Css.Style
 buttonColor button =
-    case button.color of
-        Primary ->
-            Css.batch
-                [ Css.backgroundColor (Css.rgb 16 152 247)
-                , Css.hover
-                    [ Css.backgroundColor (Css.rgb 25 180 255)
-                    ]
-                ]
+    if button.disabled then
+        Css.batch
+            [ Css.backgroundColor (Css.rgb 150 150 150)
+            ]
 
-        Secondary ->
-            Css.batch
-                [ Css.backgroundColor (Css.rgb 235 0 0)
-                , Css.hover
-                    [ Css.backgroundColor (Css.rgb 255 0 0)
+    else
+        case button.color of
+            Primary ->
+                Css.batch
+                    [ Css.backgroundColor (Css.rgb 16 152 247)
+                    , Css.hover
+                        [ Css.backgroundColor (Css.rgb 25 180 255)
+                        ]
                     ]
-                ]
 
-        Info ->
-            Css.batch
-                [ Css.backgroundColor (Css.rgb 0 160 0)
-                , Css.hover
-                    [ Css.backgroundColor (Css.rgb 0 180 0)
+            Secondary ->
+                Css.batch
+                    [ Css.backgroundColor (Css.rgb 235 0 0)
+                    , Css.hover
+                        [ Css.backgroundColor (Css.rgb 255 0 0)
+                        ]
                     ]
-                ]
+
+            Info ->
+                Css.batch
+                    [ Css.backgroundColor (Css.rgb 0 160 0)
+                    , Css.hover
+                        [ Css.backgroundColor (Css.rgb 0 180 0)
+                        ]
+                    ]
 
 
 build : msg -> Button -> Html msg
 build msg buttonData =
     button
         [ onClick msg
+        , disabled buttonData.disabled
         , css
             [ Css.padding (Css.px 8)
             , buttonColor buttonData

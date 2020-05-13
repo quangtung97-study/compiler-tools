@@ -1,5 +1,6 @@
 module DFA.Transition exposing
-    ( Model
+    ( EntryState
+    , Model
     , Msg
     , init
     , update
